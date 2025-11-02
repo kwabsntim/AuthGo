@@ -1,0 +1,5 @@
+package authgo
+
+func main() {
+
+}
