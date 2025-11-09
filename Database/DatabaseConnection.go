@@ -6,6 +6,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -14,6 +15,8 @@ import (
 
 func ConnectDB() *mongo.Client {
 	err := godotenv.Load()
+	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
+	opts := options.Client().ApplyURI(os.Getenv("MONGODB_URI")).SetServerAPIOptions(serverAPI).SetConnectTimeout(10 * time.Second)
 	if err != nil {
 		log.Println("Warning: no .env file found")
 	}
@@ -22,9 +25,6 @@ func ConnectDB() *mongo.Client {
 	if mongoURI == "" {
 		log.Fatal("MONGODB_URI not found in environment")
 	}
-
-	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	opts := options.Client().ApplyURI(mongoURI).SetServerAPIOptions(serverAPI)
 
 	client, err := mongo.Connect(context.TODO(), opts)
 	if err != nil {

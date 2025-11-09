@@ -1,7 +1,7 @@
 package main
 
 import (
-	"AuthGo/db"
+	db "AuthGo/Database"
 	"AuthGo/handlers"
 	"AuthGo/middleware"
 	"context"
@@ -18,7 +18,7 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	client := db.ConnectDB()
 	//
-	h := &handlers.Handler{Client: client}
+
 	//logger using slog to log in json format
 	defer func() {
 		if err := client.Disconnect(context.TODO()); err != nil {
@@ -27,10 +27,8 @@ func main() {
 		}
 	}()
 	//using a server mux to map the requests to the handlers
-	mux := http.NewServeMux()
-	mux.Handle("/api/Signup", middleware.MethodChecker([]string{http.MethodPost}, http.HandlerFunc(h.SignupHandler)))
-	mux.Handle("/api/login", middleware.MethodChecker([]string{http.MethodPost}, http.HandlerFunc(h.SignupHandler)))
-
+	mux := handlers.RouteSetup()
+	//adding middleware for panic recovery
 	handlerforPanicRecovery := middleware.PanicMiddleware(logger)(mux)
 	server := &http.Server{
 		Addr:    ":8080",
