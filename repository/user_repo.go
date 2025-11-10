@@ -14,6 +14,7 @@ import (
 var Client *mongo.Client
 
 func CreateUser(user *models.User) error {
+
 	user.CreatedAt = time.Now()
 
 	collection := Client.Database("usersdb").Collection("profiles")

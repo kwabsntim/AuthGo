@@ -7,38 +7,51 @@ import (
 	"net/http"
 )
 
-// creating the login handler
+// handlers/handlers.go
 func SignUpHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	//decoding the request body
+
 	var req models.User
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		http.Error(w, "Bad JSON", http.StatusBadRequest)
 		return
 	}
-	//calling the service function to create the user
+	// Call service - let it handle all business logic
 	user, err := services.RegisterUser(req.Email, req.Username, req.Password)
-	//getting a token for the created user
+	if err != nil {
+		http.Error(w, "Registration failed: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Check if user is nil
+	if user == nil {
+		http.Error(w, "User creation returned nil", http.StatusInternalServerError)
+		return
+	}
+
+	// Create token
 	token, err := services.CreateToken(user.ID.Hex())
 	if err != nil {
-		http.Error(w, "Error creating user", http.StatusInternalServerError)
+		http.Error(w, "Token creation failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Success response
 	response := models.AuthResponse{
 		Message: "User created successfully",
 		Token:   token,
 		User: models.UserResponse{
-			ID:       user.ID.Hex(), // Convert ObjectID to string for JSON
+			ID:       user.ID.Hex(),
 			Username: user.Username,
 			Email:    user.Email,
 		},
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(response)
-
 }
