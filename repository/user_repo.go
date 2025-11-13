@@ -4,38 +4,88 @@ import (
 	"AuthGo/models"
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var Client *mongo.Client
+type mongoclient struct {
+	client *mongo.Client
+}
 
-func CreateUser(user *models.User) error {
+// Constructor function that returns the interface
+func NewMongoUserRepository(client *mongo.Client) UserRepository {
+	return &mongoclient{client: client}
+}
+
+func (r *mongoclient) CreateUser(user *models.User) error {
 
 	user.CreatedAt = time.Now()
 
-	collection := Client.Database("usersdb").Collection("profiles")
+	collection := r.client.Database("localDB").Collection("profiles")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	//checking if the user already exists
-	existing := collection.FindOne(ctx, bson.M{"email": user.Email})
-	if existing.Err() == nil {
-		return errors.New("user already exists")
-	}
-
-	//creating user
+	// Direct insert with unique index handling
 	result, err := collection.InsertOne(ctx, user)
 	if err != nil {
-		return errors.New("failed to create user")
+		// Check for duplicate key error
+		if mongo.IsDuplicateKeyError(err) {
+			return errors.New("user already exists")
+		}
+		return err
 	}
 
-	// Set the generated ID back to the user
+	// Set ID if successful
 	if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
 		user.ID = oid
 	}
+	return nil
+}
+func (r *mongoclient) FindUserByEmail(email string) (*models.User, error) {
+	collection := r.client.Database("localDB").Collection("profiles")
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	var user models.User
+	err := collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+
+}
+
+func (r *mongoclient) SetupIndexes() error {
+	if r.client == nil {
+		log.Fatal("Database client not initialized")
+	}
+
+	collection := r.client.Database("localDB").Collection("profiles")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Create unique index on email
+	emailIndex := mongo.IndexModel{
+		Keys:    bson.D{{Key: "email", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+
+	// Create unique index on username
+	usernameIndex := mongo.IndexModel{
+		Keys:    bson.D{{Key: "username", Value: 1}}, // Note: matches your struct tag
+		Options: options.Index().SetUnique(true),
+	}
+
+	_, err := collection.Indexes().CreateMany(ctx, []mongo.IndexModel{emailIndex, usernameIndex})
+	if err != nil {
+		log.Printf("Warning: Failed to create indexes: %v", err)
+		return err
+	}
+
+	log.Println("Database indexes created successfully!")
 	return nil
 }

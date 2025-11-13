@@ -15,8 +15,21 @@ import (
 
 func ConnectDB() *mongo.Client {
 	err := godotenv.Load()
+	//specifying the server api version
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	opts := options.Client().ApplyURI(os.Getenv("MONGODB_URI")).SetServerAPIOptions(serverAPI).SetConnectTimeout(10 * time.Second)
+
+	//applying database pooling options
+	opts := options.Client().
+		ApplyURI(os.Getenv("MONGODB_URI")).
+		SetServerAPIOptions(serverAPI).
+		SetMaxPoolSize(20).
+		SetMinPoolSize(5).
+		SetMaxConnIdleTime(60 * time.Second).
+		SetConnectTimeout(5 * time.Second).
+		SetSocketTimeout(15 * time.Second).
+		SetServerSelectionTimeout(5 * time.Second).
+		SetRetryWrites(true).
+		SetRetryReads(true)
 	if err != nil {
 		log.Println("Warning: no .env file found")
 	}

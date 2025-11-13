@@ -5,7 +5,9 @@ import (
 	"AuthGo/handlers"
 	"AuthGo/middleware"
 	"AuthGo/repository"
+	"AuthGo/services"
 	"context"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -13,9 +15,17 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load environment variables
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Warning: no .env file found")
+	}
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	client := db.ConnectDB()
 	//checking the database connection for nil pointer
@@ -23,12 +33,25 @@ func main() {
 		logger.Error("MongoDB client is nil")
 		return
 	}
-	repository.Client = client
-
+	start := time.Now()
+	if err := client.Ping(context.TODO(), nil); err != nil {
+		log.Println("Ping failed:", err)
+	}
+	fmt.Println("Ping latency:", time.Since(start))
 	// Test the connection
-	err := client.Ping(context.TODO(), nil)
+	err = client.Ping(context.TODO(), nil)
 	if err != nil {
 		log.Fatal("Database ping failed:", err)
+	}
+
+	// Create dependencies using DI
+	userRepo := repository.NewMongoUserRepository(client)
+	userService := services.NewUserService(userRepo)
+
+	// Setup database indexes
+	err = userRepo.SetupIndexes()
+	if err != nil {
+		logger.Error("Failed to setup indexes", "error", err)
 	}
 
 	//disconnecting the mongoDB client when the main function ends
@@ -39,15 +62,25 @@ func main() {
 		}
 	}()
 	//using a server mux to map the requests to the handlers
-	mux := handlers.RouteSetup()
+	mux := handlers.RouteSetup(userService)
 	handlerWithPanicRecovery := middleware.PanicMiddleware(logger)(mux)
 
-	server := &http.Server{
-		Addr:    ":8080",
-		Handler: handlerWithPanicRecovery, // Use middleware
+	// Get port from environment
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // fallback
 	}
 
-	logger.Info("Server started on port 8080")
+	server := &http.Server{
+		Addr:           ":" + port,
+		Handler:        handlerWithPanicRecovery,
+		ReadTimeout:    5 * time.Second,
+		WriteTimeout:   5 * time.Second,
+		IdleTimeout:    60 * time.Second,
+		MaxHeaderBytes: 1 << 20, // 1MB
+	}
+
+	logger.Info("Server started on port " + port)
 	go func() {
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
