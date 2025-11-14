@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/joho/godotenv"
 )
 
 // getting secret key from .env using the init function
@@ -16,11 +15,6 @@ var secretKey []byte
 
 func init() {
 
-	//loading the .env file
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("Warning: no .env file found")
-	}
 	secret_key := os.Getenv("SECRET_KEY")
 	if secret_key == "" {
 		log.Fatal("SECRET_KEY not found in environment")
