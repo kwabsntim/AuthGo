@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: authgo-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: localDB
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - authgo-network
+
+  auth-service:
+    build: .
+    container_name: authgo-service
+    ports:
+      - "8080:8080"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/localDB
+      - SECRET_KEY=${SECRET_KEY}
+      - PORT=${PORT}
+      - APP_URL=${APP_URL}
+    depends_on:
+      - mongodb
+    networks:
+      - authgo-network
+
+volumes:
+  mongo_data:
+
+networks:
+  authgo-network:
+    driver: bridge

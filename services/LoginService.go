@@ -8,10 +8,14 @@ import (
 	"errors"
 )
 
+// this stores everything from the user repository
+// all the functions from user_repo.go are called here
 type LoginServiceImpl struct {
 	userRepo repository.UserRepository
 }
 
+// this puts userRepo into the LoginServiceImpl struct and this
+// is the link to call the methods from the repository
 func NewLoginService(userRepo repository.UserRepository) *LoginServiceImpl {
 	return &LoginServiceImpl{userRepo: userRepo}
 }
