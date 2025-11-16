@@ -14,7 +14,9 @@ import (
 )
 
 func ConnectDB() *mongo.Client {
-	err := godotenv.Load()
+	// Try to load .env file (optional - for local development)
+	godotenv.Load()
+	
 	//specifying the server api version
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 
@@ -30,9 +32,6 @@ func ConnectDB() *mongo.Client {
 		SetServerSelectionTimeout(5 * time.Second).
 		SetRetryWrites(true).
 		SetRetryReads(true)
-	if err != nil {
-		log.Println("Warning: no .env file found")
-	}
 
 	mongoURI := os.Getenv("MONGODB_URI")
 	if mongoURI == "" {

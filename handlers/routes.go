@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"AuthGo/middleware"
 	"AuthGo/services"
 	"net/http"
 )
@@ -20,6 +21,9 @@ func RouteSetup(services *ServiceContainer) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/Signup", signupHandler.SignUp)
 	mux.HandleFunc("/api/Login", loginHandler.Login)
+	
+	// Protected routes
+	mux.HandleFunc("/api/profile", middleware.AuthMiddleware(GetProfile))
 
 	return mux
 }

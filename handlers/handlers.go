@@ -3,7 +3,9 @@ package handlers
 import (
 	"AuthGo/models"
 	"AuthGo/services"
+	"AuthGo/utils"
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -45,7 +47,7 @@ func (h *SignUpHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 	// Create token
 
-	token, err := services.CreateToken(user.ID.Hex())
+	token, err := utils.CreateToken(user.ID.Hex())
 	if err != nil {
 		http.Error(w, "Token creation failed: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -78,15 +80,16 @@ func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req models.User
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		http.Error(w, "Bad request: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	log.Printf("Login attempt for email: %s", req.Email)
 	user, err := h.loginService.LoginUser(req.Email, req.Password)
 	if err != nil {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
-	token, err := services.CreateToken(user.ID.Hex())
+	token, err := utils.CreateToken(user.ID.Hex())
 	if err != nil {
 		http.Error(w, "Token creation failed: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -101,8 +104,8 @@ func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	responseBytes, _ := json.Marshal(response)
+	w.WriteHeader(http.StatusOK)
+	w.Write(responseBytes)
+	log.Printf("Login successful for user: %s", user.Email)
 }

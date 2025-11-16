@@ -20,14 +20,11 @@ import (
 )
 
 func main() {
-	// Load environment variables
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("Warning: no .env file found")
-	}
+	// Load environment variables (optional - for local development)
+	godotenv.Load()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	
+
 	// Retry MongoDB connection with exponential backoff
 	var client *mongo.Client
 	for i := 0; i < 10; i++ {
@@ -45,7 +42,7 @@ func main() {
 		logger.Info("MongoDB connection failed, retrying...", "attempt", i+1, "wait", waitTime)
 		time.Sleep(waitTime)
 	}
-	
+
 	if client == nil {
 		logger.Error("Failed to connect to MongoDB after retries")
 		return
@@ -65,7 +62,7 @@ func main() {
 	handlerWithPanicRecovery := middleware.PanicMiddleware(logger)(mux)
 
 	// Setup database indexes
-	err = userRepo.SetupIndexes()
+	err := userRepo.SetupIndexes()
 	if err != nil {
 		logger.Error("Failed to setup indexes", "error", err)
 		return
