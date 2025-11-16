@@ -5,13 +5,21 @@ import (
 	"net/http"
 )
 
-func RouteSetup(userService services.UserService) *http.ServeMux {
+// amazonq-ignore-next-line
+
+type ServiceContainer struct {
+	RegisterService services.RegisterInterface
+	LoginService    services.LoginInterface
+}
+
+func RouteSetup(services *ServiceContainer) *http.ServeMux {
 	//using server mux to map the requests
-	signupHandler := NewSignUpHandler(userService)
+	signupHandler := NewSignUpHandler(services.RegisterService)
+	loginHandler := NewLoginHandler(services.LoginService)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/Signup", signupHandler.Handle)
-	mux.HandleFunc("/api/Login", LoginUser)
+	mux.HandleFunc("/api/Signup", signupHandler.SignUp)
+	mux.HandleFunc("/api/Login", loginHandler.Login)
 
 	return mux
 }

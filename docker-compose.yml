@@ -5,13 +5,19 @@ services:
     image: mongo:latest
     container_name: authgo-mongodb
     ports:
-      - "27017:27017"
+      - "27018:27017"
     environment:
       MONGO_INITDB_DATABASE: localDB
     volumes:
       - mongo_data:/data/db
     networks:
       - authgo-network
+    command: mongod --quiet --logpath /dev/null
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   auth-service:
     build: .
@@ -24,9 +30,11 @@ services:
       - PORT=${PORT}
       - APP_URL=${APP_URL}
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - authgo-network
+    restart: on-failure
 
 volumes:
   mongo_data:

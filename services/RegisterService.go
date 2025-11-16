@@ -9,15 +9,16 @@ import (
 	"time"
 )
 
-type UserServiceImpl struct {
+// this stores all functions from the user repository
+type RegisterServiceImpl struct {
 	userRepo repository.UserRepository
 }
 
-func NewUserService(userRepo repository.UserRepository) UserService {
-	return &UserServiceImpl{userRepo: userRepo}
+func NewRegisterService(userRepo repository.UserRepository) RegisterInterface {
+	return &RegisterServiceImpl{userRepo: userRepo}
 }
 
-func (s *UserServiceImpl) RegisterUser(email, username, password string) (*models.User, error) {
+func (s *RegisterServiceImpl) RegisterUser(email, username, password string) (*models.User, error) {
 	//validating the input calling the validation functions
 	start := time.Now()
 

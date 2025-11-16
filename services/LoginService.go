@@ -16,7 +16,11 @@ type LoginServiceImpl struct {
 
 // this puts userRepo into the LoginServiceImpl struct and this
 // is the link to call the methods from the repository
-func NewLoginService(userRepo repository.UserRepository) *LoginServiceImpl {
+func NewLoginService(userRepo repository.UserRepository) LoginInterface {
+	if userRepo == nil {
+		panic("userRepo cannot be nil")
+	}
+
 	return &LoginServiceImpl{userRepo: userRepo}
 }
 

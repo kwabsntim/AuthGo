@@ -4,50 +4,48 @@ import (
 	"AuthGo/models"
 	"AuthGo/services"
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"time"
 )
 
 type SignUpHandler struct {
-	userService services.UserService
+	registerService services.RegisterInterface
+}
+type LoginHandler struct {
+	loginService services.LoginInterface
 }
 
-func NewSignUpHandler(userService services.UserService) *SignUpHandler {
-	return &SignUpHandler{userService: userService}
+func NewSignUpHandler(registerService services.RegisterInterface) *SignUpHandler {
+	return &SignUpHandler{registerService: registerService}
+}
+func NewLoginHandler(loginService services.LoginInterface) *LoginHandler {
+	return &LoginHandler{loginService: loginService}
 }
 
-func (h *SignUpHandler) Handle(w http.ResponseWriter, r *http.Request) {
+func (h *SignUpHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	start := time.Now()
 
 	var req models.User
-	decodeStart := time.Now()
+
 	// Decode request body
 	err := json.NewDecoder(r.Body).Decode(&req)
-	fmt.Printf("⏱️ JSON Decode: %v\n", time.Since(decodeStart))
 	if err != nil {
-		fmt.Printf("❌ JSON Decode Error: %v\n", err)
 		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	fmt.Printf("📝 Request data: email=%s, username=%s\n", req.Email, req.Username)
+
 	// Call service - let it handle all business logic
-	registerStart := time.Now()
-	user, err := h.userService.RegisterUser(req.Email, req.Username, req.Password)
-	fmt.Printf("⏱️ Register User: %v\n", time.Since(registerStart))
+
+	user, err := h.registerService.RegisterUser(req.Email, req.Username, req.Password)
 	if err != nil {
-		fmt.Printf("❌ Registration Error: %v\n", err)
 		http.Error(w, "Registration failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// Create token
-	tokenStart := time.Now()
+
 	token, err := services.CreateToken(user.ID.Hex())
-	fmt.Printf("⏱️ Create Token: %v\n", time.Since(tokenStart))
 	if err != nil {
 		http.Error(w, "Token creation failed: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -63,15 +61,16 @@ func (h *SignUpHandler) Handle(w http.ResponseWriter, r *http.Request) {
 			Email:    user.Email,
 		},
 	}
-	responseStart := time.Now()
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
-	fmt.Printf("⏱️ Response: %v\n", time.Since(responseStart))
-	fmt.Printf("🔥 Total Request: %v\n\n", time.Since(start))
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+
 }
 
-func LoginUser(w http.ResponseWriter, r *http.Request) {
+func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -80,6 +79,30 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+	user, err := h.loginService.LoginUser(req.Email, req.Password)
+	if err != nil {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	}
+	token, err := services.CreateToken(user.ID.Hex())
+	if err != nil {
+		http.Error(w, "Token creation failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	response := models.AuthResponse{
+		Message: "Login successful",
+		Token:   token,
+		User: models.UserResponse{
+			ID:       user.ID.Hex(),
+			Username: user.Username,
+			Email:    user.Email,
+		},
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
 }
