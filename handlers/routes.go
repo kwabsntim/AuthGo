@@ -19,11 +19,8 @@ func RouteSetup(services *ServiceContainer) *http.ServeMux {
 	loginHandler := NewLoginHandler(services.LoginService)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/Signup", signupHandler.SignUp)
-	mux.HandleFunc("/api/Login", loginHandler.Login)
-	
-	// Protected routes
-	mux.HandleFunc("/api/profile", middleware.AuthMiddleware(GetProfile))
+	mux.HandleFunc("/api/Signup", middleware.MethodChecker("POST")(signupHandler.SignUp))
+	mux.HandleFunc("/api/Login", middleware.MethodChecker("POST")(loginHandler.Login))
 
 	return mux
 }

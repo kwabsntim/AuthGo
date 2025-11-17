@@ -57,7 +57,6 @@ func main() {
 		LoginService:    services.NewLoginService(userRepo),
 	}
 	// Setup routes with container
-	// amazonq-ignore-next-line
 	mux := handlers.RouteSetup(serviceContainer)
 	handlerWithPanicRecovery := middleware.PanicMiddleware(logger)(mux)
 
