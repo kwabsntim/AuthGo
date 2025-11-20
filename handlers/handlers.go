@@ -7,11 +7,15 @@ import (
 	"net/http"
 )
 
+// ---------------------------Structs----------------------------
 type SignUpHandler struct {
 	registerService services.RegisterInterface
 }
 type LoginHandler struct {
 	loginService services.LoginInterface
+}
+type FetchUsersHandler struct {
+	fetchUsersService services.FetchUsersInterface
 }
 
 func NewSignUpHandler(registerService services.RegisterInterface) *SignUpHandler {
@@ -20,6 +24,11 @@ func NewSignUpHandler(registerService services.RegisterInterface) *SignUpHandler
 func NewLoginHandler(loginService services.LoginInterface) *LoginHandler {
 	return &LoginHandler{loginService: loginService}
 }
+func NewFetchHandler(fetchUsersService services.FetchUsersInterface) *FetchUsersHandler {
+	return &FetchUsersHandler{fetchUsersService: fetchUsersService}
+}
+
+//---------------------------Handler functions----------------------------
 
 func (h *SignUpHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	// Validate HTTP method
@@ -40,9 +49,13 @@ func (h *SignUpHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Token creation failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	data := map[string]interface{}{
+		"token": token,
+		"user":  user,
+	}
 
 	// Success response
-	SendAuthResponse(w, "User created successfully", token, user, http.StatusCreated)
+	SendAuthResponse(w, "User created successfully", data, http.StatusCreated)
 
 }
 
@@ -64,6 +77,22 @@ func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Token creation failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	data := map[string]interface{}{
+		"token": token,
+		"user":  user,
+	}
 	// Success response
-	SendAuthResponse(w, "Login successful", token, user, http.StatusCreated)
+	SendAuthResponse(w, "Login successful", data, http.StatusCreated)
+}
+func (h *FetchUsersHandler) FetchAllUsers(w http.ResponseWriter, r *http.Request) {
+
+	users, err := h.fetchUsersService.FetchAllUsers()
+	if err != nil {
+		http.Error(w, "Could not fetch users", http.StatusInternalServerError)
+		return
+	}
+	data := map[string]interface{}{
+		"users": users,
+	}
+	SendAuthResponse(w, "Fetch successful", data, http.StatusCreated)
 }

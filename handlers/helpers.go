@@ -25,15 +25,10 @@ func CreateTokenForUser(user *models.User) (string, error) {
 }
 
 // SendAuthResponse sends a standardized authentication response
-func SendAuthResponse(w http.ResponseWriter, message string, token string, user *models.User, statusCode int) {
-	response := models.AuthResponse{
+func SendAuthResponse(w http.ResponseWriter, message string, data interface{}, statusCode int) {
+	response := models.JSONresponse{
 		Message: message,
-		Token:   token,
-		User: models.UserResponse{
-			ID:       user.ID.Hex(),
-			Username: user.Username,
-			Email:    user.Email,
-		},
+		Data:    data,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

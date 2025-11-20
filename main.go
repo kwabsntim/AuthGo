@@ -55,6 +55,7 @@ func main() {
 	serviceContainer := &handlers.ServiceContainer{
 		RegisterService: services.NewRegisterService(userRepo),
 		LoginService:    services.NewLoginService(userRepo),
+		FetchService:    services.NewFetchUserService(userRepo),
 	}
 	// Setup routes with container
 	mux := handlers.RouteSetup(serviceContainer)

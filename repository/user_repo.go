@@ -1,5 +1,6 @@
 package repository
 
+//when changing the database change it here
 import (
 	"AuthGo/models"
 	"context"
@@ -13,6 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// this stores all the methods from mongodb
 type mongoclient struct {
 	client *mongo.Client
 }
@@ -88,4 +90,23 @@ func (r *mongoclient) SetupIndexes() error {
 
 	log.Println("Database indexes created successfully!")
 	return nil
+}
+func (r *mongoclient) FetchAllUsers() ([]models.User, error) {
+	collection := r.client.Database("localDB").Collection("profiles")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	findOptions := options.Find().SetProjection(bson.M{"password": 0})
+	cursor, err := collection.Find(ctx, bson.M{}, findOptions)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var users []models.User
+	if err = cursor.All(ctx, &users); err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }
