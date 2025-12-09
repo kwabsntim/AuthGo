@@ -1,7 +1,7 @@
 package main
 
 import (
-	db "AuthGo/Database"
+	db "AuthGo/database"
 	"AuthGo/handlers"
 	"AuthGo/middleware"
 	"AuthGo/repository"
